@@ -18,10 +18,34 @@ body {
     color: #0f172a;
 }
 
+.topbar {
+    display: flex;
+    height: 48px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    border-bottom: 1px solid #cbd5e1;
+    background: #ffffff;
+}
+
+.project-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 0;
+    padding: 6px 0;
+    font-weight: 600;
+}
+
+.element-counter {
+    color: #64748b;
+    font-size: 13px;
+}
+
 .layout {
     display: flex;
     width: 100%;
-    height: 100dvh;
+    height: calc(100dvh - 48px);
     min-width: 0;
 }
 
@@ -171,6 +195,110 @@ button:hover,
     height: 14px;
     flex: 0 0 14px;
     vertical-align: middle;
+}
+
+.project-modal {
+    width: min(440px, calc(100% - 32px));
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    box-shadow: 0 20px 60px rgb(15 23 42 / 25%);
+}
+
+.project-modal::backdrop {
+    background: rgb(15 23 42 / 35%);
+}
+
+.project-modal-content {
+    display: grid;
+    gap: 16px;
+    padding: 20px;
+}
+
+.project-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.project-modal-header h2 {
+    margin: 0;
+}
+
+.close-project-modal {
+    border: 0;
+    padding: 2px 8px;
+    font-size: 22px;
+}
+
+.project-list {
+    display: grid;
+    gap: 6px;
+}
+
+.project-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: 6px;
+    align-items: center;
+    padding: 4px;
+    border-radius: 6px;
+}
+
+.project-row.is-active {
+    background: #dbeafe;
+}
+
+.project-name {
+    border: 0;
+    background: transparent;
+    text-align: left;
+}
+
+.project-name-input {
+    width: 100%;
+    border: 1px solid #3b82f6;
+    border-radius: 4px;
+    padding: 6px;
+    font: inherit;
+}
+
+.project-icon-action {
+    display: grid;
+    min-width: 52px;
+    gap: 2px;
+    place-items: center;
+    padding: 6px;
+    border: 0;
+    background: transparent;
+    font-size: 11px;
+}
+
+.project-icon-action svg,
+.project-action-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.project-modal-actions {
+    display: flex;
+    gap: 10px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 16px;
+}
+
+.project-action {
+    display: grid;
+    min-width: 72px;
+    gap: 4px;
+    justify-items: center;
+    padding: 8px 12px;
+    font-size: 12px;
+}
+
+.project-action-icon {
+    display: block;
+    height: 20px;
 }
 
 .item-icon svg,

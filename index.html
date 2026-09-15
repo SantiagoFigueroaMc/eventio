@@ -8,6 +8,12 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <header class="topbar">
+        <button class="project-picker" type="button" aria-haspopup="dialog">
+            <span class="project-picker-label"></span>
+        </button>
+        <span class="element-counter"></span>
+    </header>
     <main class="layout">
         <section class="panel explorer" aria-label="Explorer">
             <details class="pages" open>
@@ -46,6 +52,21 @@
             </div>
         </section>
     </main>
+    <dialog class="project-modal" aria-labelledby="project-modal-title">
+        <div class="project-modal-content">
+            <header class="project-modal-header">
+                <h2 id="project-modal-title">Projects</h2>
+                <button class="close-project-modal" type="button" aria-label="Close projects">×</button>
+            </header>
+            <div class="project-list"></div>
+            <div class="project-modal-actions">
+                <button class="project-action create-project" type="button">
+                    <span class="project-action-icon" data-icon="add" aria-hidden="true"></span>
+                    <span>Create</span>
+                </button>
+            </div>
+        </div>
+    </dialog>
     <script type="module" src="main.js"></script>
 </body>
 </html>

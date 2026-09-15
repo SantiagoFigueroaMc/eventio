@@ -13,7 +13,20 @@ const imageButtons = document.querySelector(".image-buttons");
 const eventHeading = document.querySelector(".event-heading");
 const noSelection = document.querySelector(".no-selection");
 const editorForm = document.querySelector(".editor-form");
-const pages = JSON.parse(localStorage.getItem("eventio-pages") || "[]");
+const projectPicker = document.querySelector(".project-picker");
+const projectPickerLabel = document.querySelector(".project-picker-label");
+const elementCounter = document.querySelector(".element-counter");
+const projectModal = document.querySelector(".project-modal");
+const projectList = document.querySelector(".project-list");
+const projects = JSON.parse(localStorage.getItem("eventio-projects") || "[]");
+const legacyPages = JSON.parse(localStorage.getItem("eventio-pages") || "[]");
+if (!projects.length) {
+    projects.push({ id: crypto.randomUUID(), name: "Untitled project", pages: legacyPages });
+    localStorage.setItem("eventio-projects", JSON.stringify(projects));
+}
+let currentProjectId = localStorage.getItem("eventio-current-project") || projects[0].id;
+if (!projects.some((project) => project.id === currentProjectId)) currentProjectId = projects[0].id;
+let pages = projects.find((project) => project.id === currentProjectId).pages;
 let selectedPageId;
 let selectedButtonId;
 let selectedEventId;
@@ -22,6 +35,14 @@ const expandedButtons = new Set();
 
 function savePages() {
     localStorage.setItem("eventio-pages", JSON.stringify(pages));
+    const project = currentProject();
+    project.pages = pages;
+    localStorage.setItem("eventio-projects", JSON.stringify(projects));
+    localStorage.setItem("eventio-current-project", currentProjectId);
+}
+
+function currentProject() {
+    return projects.find((project) => project.id === currentProjectId);
 }
 
 function currentPage() {
@@ -313,6 +334,130 @@ function render() {
     renderPages();
     renderMain();
     renderEditor();
+    renderProjectStatus();
+}
+
+function countElements() {
+    return pages.reduce((total, page) => total + 1 + page.data.buttons.reduce(
+        (buttonTotal, button) => buttonTotal + 1 + button.events.length,
+        0,
+    ) + page.data.events.length, 0);
+}
+
+function renderProjectStatus() {
+    projectPickerLabel.textContent = currentProject().name;
+    elementCounter.textContent = `${countElements()} elements`;
+}
+
+function renderProjectList() {
+    projectList.replaceChildren();
+    projects.forEach((project) => {
+        const row = document.createElement("div");
+        row.className = `project-row${project.id === currentProjectId ? " is-active" : ""}`;
+        const select = document.createElement("button");
+        select.className = "project-name";
+        select.type = "button";
+        select.textContent = project.name;
+        select.addEventListener("click", () => switchProject(project.id));
+        const edit = document.createElement("button");
+        edit.className = "project-icon-action";
+        edit.type = "button";
+        edit.setAttribute("aria-label", `Edit ${project.name}`);
+        edit.append(createIcon("edit"));
+        const editLabel = document.createElement("span");
+        editLabel.textContent = "Edit";
+        edit.append(editLabel);
+        edit.addEventListener("click", () => renameProject(project, row, select));
+        const share = document.createElement("button");
+        share.className = "project-icon-action";
+        share.type = "button";
+        share.setAttribute("aria-label", `Share ${project.name}`);
+        share.append(createIcon("share"));
+        const shareLabel = document.createElement("span");
+        shareLabel.textContent = "Share";
+        share.append(shareLabel);
+        share.addEventListener("click", () => shareProject(project));
+        const remove = document.createElement("button");
+        remove.className = "project-icon-action";
+        remove.type = "button";
+        remove.setAttribute("aria-label", `Delete ${project.name}`);
+        remove.append(createIcon("delete"));
+        const removeLabel = document.createElement("span");
+        removeLabel.textContent = "Delete";
+        remove.append(removeLabel);
+        remove.disabled = projects.length === 1;
+        remove.addEventListener("click", () => deleteProject(project));
+        row.append(select, edit, share, remove);
+        projectList.append(row);
+    });
+}
+
+function switchProject(projectId) {
+    currentProjectId = projectId;
+    pages = currentProject().pages;
+    selectedPageId = undefined;
+    selectedButtonId = undefined;
+    selectedEventId = undefined;
+    localStorage.setItem("eventio-current-project", currentProjectId);
+    render();
+    projectModal.close();
+}
+
+function createProject() {
+    const project = { id: crypto.randomUUID(), name: `Project ${projects.length + 1}`, pages: [] };
+    projects.push(project);
+    switchProject(project.id);
+}
+
+function renameProject(project, row, select) {
+    const input = document.createElement("input");
+    input.className = "project-name-input";
+    input.value = project.name;
+    row.replaceChild(input, select);
+    input.focus();
+    input.select();
+    const saveName = () => {
+        project.name = input.value.trim() || project.name;
+        localStorage.setItem("eventio-projects", JSON.stringify(projects));
+        renderProjectList();
+        renderProjectStatus();
+    };
+    input.addEventListener("blur", saveName, { once: true });
+    input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") input.blur();
+        if (event.key === "Escape") {
+            input.value = project.name;
+            input.blur();
+        }
+    });
+}
+
+function deleteProject(project) {
+    if (projects.length === 1 || !window.confirm(`Delete "${project.name}"?`)) return;
+    const index = projects.findIndex((item) => item.id === project.id);
+    projects.splice(index, 1);
+    if (project.id === currentProjectId) {
+        currentProjectId = projects[0].id;
+        pages = currentProject().pages;
+        selectedPageId = undefined;
+        selectedButtonId = undefined;
+        selectedEventId = undefined;
+    }
+    localStorage.setItem("eventio-projects", JSON.stringify(projects));
+    render();
+    renderProjectList();
+}
+
+function shareProject(project) {
+    const payload = JSON.stringify(project);
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(payload).then(
+            () => window.alert("Project data copied to the clipboard."),
+            () => window.alert("Unable to copy project data."),
+        );
+    } else {
+        window.alert("Clipboard access is unavailable.");
+    }
 }
 
 function createPage() {
@@ -362,6 +507,15 @@ function startButtonDrag(event, element, button) {
 }
 
 document.querySelector(".add-page").addEventListener("click", createPage);
+projectPicker.addEventListener("click", () => {
+    renderProjectList();
+    projectModal.showModal();
+});
+document.querySelector(".close-project-modal").addEventListener("click", () => projectModal.close());
+document.querySelector(".create-project").addEventListener("click", createProject);
+document.querySelectorAll("[data-icon]").forEach((element) => {
+    element.innerHTML = icons[element.dataset.icon];
+});
 document.querySelector(".image-input").addEventListener("change", (event) => readImage(event.target.files[0]));
 mainPanel.addEventListener("dragover", (event) => {
     event.preventDefault();
