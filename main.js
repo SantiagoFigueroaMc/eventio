@@ -17,6 +17,8 @@ const pages = JSON.parse(localStorage.getItem("eventio-pages") || "[]");
 let selectedPageId;
 let selectedButtonId;
 let selectedEventId;
+const expandedPages = new Set(pages.map((page) => page.data.id));
+const expandedButtons = new Set();
 
 function savePages() {
     localStorage.setItem("eventio-pages", JSON.stringify(pages));
@@ -92,9 +94,14 @@ function renderPages() {
             selectedEventId = undefined;
             render();
         });
-        pageItem.append(pageButton);
+        const pageRow = createTreeRow(pageButton, expandedPages.has(page.data.id), () => {
+            toggleSet(expandedPages, page.data.id);
+            renderPages();
+        });
+        pageItem.append(pageRow);
         const children = document.createElement("div");
         children.className = "tree-children";
+        children.hidden = !expandedPages.has(page.data.id);
         const pageChildren = [
             ...page.data.buttons.map((button) => ({ kind: "button", item: button, name: button.label })),
             ...page.data.events.map((event) => ({ kind: "page-event", item: event, name: event.name })),
@@ -115,9 +122,14 @@ function renderPages() {
                 selectedEventId = undefined;
                 render();
             });
-            children.append(buttonItem);
+            const buttonRow = createTreeRow(buttonItem, expandedButtons.has(item.id), () => {
+                toggleSet(expandedButtons, item.id);
+                renderPages();
+            });
+            children.append(buttonRow);
             const buttonEvents = document.createElement("div");
             buttonEvents.className = "tree-children button-events";
+            buttonEvents.hidden = !expandedButtons.has(item.id);
             sorted(item.events).forEach((event) => buttonEvents.append(
                 makeTreeItem("event", event.name, `tree-item event-tree-item${event.id === selectedEventId && item.id === selectedButtonId ? " is-active" : ""}`, () => {
                     selectedPageId = page.data.id;
@@ -131,6 +143,27 @@ function renderPages() {
         pageItem.append(children);
         pageList.append(pageItem);
     });
+}
+
+function createTreeRow(item, expanded, onToggle) {
+    const row = document.createElement("div");
+    row.className = "tree-row";
+    const toggle = document.createElement("button");
+    toggle.className = `tree-toggle${expanded ? " is-expanded" : ""}`;
+    toggle.type = "button";
+    toggle.setAttribute("aria-label", expanded ? "Collapse level" : "Expand level");
+    toggle.setAttribute("aria-expanded", String(expanded));
+    toggle.addEventListener("click", (event) => {
+        event.stopPropagation();
+        onToggle();
+    });
+    row.append(toggle, item);
+    return row;
+}
+
+function toggleSet(set, id) {
+    if (set.has(id)) set.delete(id);
+    else set.add(id);
 }
 
 function renderMain() {
