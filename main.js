@@ -1,3 +1,5 @@
+import { icons } from "./icons.js";
+
 const layout = document.querySelector(".layout");
 const panels = [...document.querySelectorAll(".panel")];
 const splitters = [...document.querySelectorAll(".splitter")];
@@ -8,17 +10,13 @@ const emptyState = document.querySelector(".empty-state");
 const canvas = document.querySelector(".canvas");
 const pageImage = document.querySelector(".page-image");
 const imageButtons = document.querySelector(".image-buttons");
-const pageNameInput = document.querySelector(".page-name");
-const buttonList = document.querySelector(".button-list");
-const noButtons = document.querySelector(".no-buttons");
 const eventHeading = document.querySelector(".event-heading");
-const eventList = document.querySelector(".event-list");
 const noSelection = document.querySelector(".no-selection");
-const addEventButton = document.querySelector(".add-event");
+const editorForm = document.querySelector(".editor-form");
 const pages = JSON.parse(localStorage.getItem("eventio-pages") || "[]");
 let selectedPageId;
 let selectedButtonId;
-let selectedEventOwner;
+let selectedEventId;
 
 function savePages() {
     localStorage.setItem("eventio-pages", JSON.stringify(pages));
@@ -34,22 +32,53 @@ function sorted(items) {
 
 function ownerEvents() {
     const page = currentPage();
-    if (!page || !selectedEventOwner) return null;
-    if (selectedEventOwner.type === "page") return page.data.events;
-    const button = page.data.buttons.find((item) => item.id === selectedEventOwner.id);
+    if (!page || !selectedButtonId) return page?.data.events || null;
+    const button = page.data.buttons.find((item) => item.id === selectedButtonId);
     return button?.events || null;
 }
 
-function makeTreeItem(icon, name, className, onClick) {
+function selectedElement() {
+    const page = currentPage();
+    if (!page) return null;
+    if (selectedEventId) {
+        const events = selectedButtonId
+            ? page.data.buttons.find((button) => button.id === selectedButtonId)?.events
+            : page.data.events;
+        const event = events?.find((item) => item.id === selectedEventId);
+        if (event) return { type: "event", value: event };
+    }
+    if (selectedButtonId) {
+        const button = page.data.buttons.find((item) => item.id === selectedButtonId);
+        if (button) return { type: "button", value: button };
+    }
+    return { type: "page", value: page };
+}
+
+function makeTreeItem(iconName, name, className, onClick) {
     const item = document.createElement("button");
     item.className = className;
     item.type = "button";
-    item.innerHTML = `<span class="tree-icon" aria-hidden="true">${icon}</span>`;
+    const icon = document.createElement("span");
+    icon.className = "tree-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.innerHTML = icons[iconName];
     const label = document.createElement("span");
     label.textContent = name;
-    item.append(label);
+    item.append(icon, label);
     item.addEventListener("click", onClick);
     return item;
+}
+
+function createIcon(iconName, className = "item-icon") {
+    const icon = document.createElement("span");
+    icon.className = className;
+    icon.setAttribute("aria-hidden", "true");
+    icon.innerHTML = icons[iconName];
+    return icon;
+}
+
+function setEditorHeading(iconName, label) {
+    eventHeading.replaceChildren(createIcon(iconName, "editor-heading-icon"), document.createTextNode(label));
 }
 
 function renderPages() {
@@ -57,10 +86,10 @@ function renderPages() {
     sorted(pages).forEach((page) => {
         const pageItem = document.createElement("div");
         pageItem.className = `tree-node${page.data.id === selectedPageId && !selectedButtonId ? " is-active" : ""}`;
-        const pageButton = makeTreeItem("▣", page.name, "tree-item page-item", () => {
+        const pageButton = makeTreeItem("page", page.name, "tree-item page-item", () => {
             selectedPageId = page.data.id;
             selectedButtonId = undefined;
-            selectedEventOwner = { type: "page" };
+            selectedEventId = undefined;
             render();
         });
         pageItem.append(pageButton);
@@ -72,33 +101,36 @@ function renderPages() {
         ].sort((a, b) => a.name.localeCompare(b.name));
         pageChildren.forEach(({ kind, item }) => {
             if (kind === "page-event") {
-                children.append(makeTreeItem("⚡", item.name, "tree-item event-tree-item", () => selectEventOwner(page.data.id, { type: "page" })));
+                children.append(makeTreeItem("event", item.name, `tree-item event-tree-item${item.id === selectedEventId && page.data.id === selectedPageId && !selectedButtonId ? " is-active" : ""}`, () => {
+                    selectedPageId = page.data.id;
+                    selectedButtonId = undefined;
+                    selectedEventId = item.id;
+                    render();
+                }));
                 return;
             }
-            const buttonItem = makeTreeItem("◆", item.label, `tree-item button-item${item.id === selectedButtonId ? " is-active" : ""}`, () => {
+            const buttonItem = makeTreeItem("button", item.label, `tree-item button-item${item.id === selectedButtonId ? " is-active" : ""}`, () => {
                 selectedPageId = page.data.id;
                 selectedButtonId = item.id;
-                selectedEventOwner = { type: "button", id: item.id };
+                selectedEventId = undefined;
                 render();
             });
             children.append(buttonItem);
             const buttonEvents = document.createElement("div");
             buttonEvents.className = "tree-children button-events";
             sorted(item.events).forEach((event) => buttonEvents.append(
-                makeTreeItem("⚡", event.name, "tree-item event-tree-item", () => selectEventOwner(page.data.id, { type: "button", id: item.id })),
+                makeTreeItem("event", event.name, `tree-item event-tree-item${event.id === selectedEventId && item.id === selectedButtonId ? " is-active" : ""}`, () => {
+                    selectedPageId = page.data.id;
+                    selectedButtonId = item.id;
+                    selectedEventId = event.id;
+                    render();
+                }),
             ));
             children.append(buttonEvents);
         });
         pageItem.append(children);
         pageList.append(pageItem);
     });
-}
-
-function selectEventOwner(pageId, owner) {
-    selectedPageId = pageId;
-    selectedButtonId = owner.type === "button" ? owner.id : undefined;
-    selectedEventOwner = owner;
-    render();
 }
 
 function renderMain() {
@@ -124,69 +156,16 @@ function renderPlacedButtons(page) {
         const element = document.createElement("button");
         element.className = `placed-button${button.id === selectedButtonId ? " is-selected" : ""}`;
         element.type = "button";
-        element.textContent = button.label;
+        element.append(createIcon("button"), document.createTextNode(button.label));
         element.style.left = `${button.x}%`;
         element.style.top = `${button.y}%`;
         element.addEventListener("click", () => {
             selectedButtonId = button.id;
-            selectedEventOwner = { type: "button", id: button.id };
+            selectedEventId = undefined;
             render();
         });
         element.addEventListener("pointerdown", (event) => startButtonDrag(event, element, button));
         imageButtons.append(element);
-    });
-}
-
-function renderControls() {
-    const page = currentPage();
-    pageNameInput.value = page?.name || "";
-    pageNameInput.disabled = !page;
-    document.querySelector(".add-button").disabled = !page?.data.image;
-    buttonList.replaceChildren();
-    const buttons = sorted(page?.data.buttons || []);
-    noButtons.hidden = buttons.length > 0;
-    buttons.forEach((button) => {
-        const card = document.createElement("article");
-        card.className = "button-card";
-        const header = document.createElement("header");
-        const title = document.createElement("strong");
-        title.textContent = `◆ ${button.label}`;
-        const deleteButton = document.createElement("button");
-        deleteButton.type = "button";
-        deleteButton.textContent = "Delete";
-        header.append(title, deleteButton);
-        const label = document.createElement("label");
-        label.append("Label");
-        const labelInput = document.createElement("input");
-        labelInput.type = "text";
-        labelInput.value = button.label;
-        label.append(labelInput);
-        const positionFields = document.createElement("div");
-        positionFields.className = "position-fields";
-        const xField = createPositionField("X (%)", button.x);
-        const yField = createPositionField("Y (%)", button.y);
-        positionFields.append(xField.label, yField.label);
-        card.append(header, label, positionFields);
-        deleteButton.addEventListener("click", () => {
-            page.data.buttons = page.data.buttons.filter((item) => item.id !== button.id);
-            if (selectedButtonId === button.id) selectedButtonId = undefined;
-            savePages();
-            render();
-        });
-        labelInput.addEventListener("input", (event) => {
-            button.label = event.target.value || "Button";
-            savePages();
-            renderPages();
-            renderMain();
-        });
-        [["x", xField.input], ["y", yField.input]].forEach(([axis, input]) => {
-            input.addEventListener("input", (event) => {
-                button[axis] = Math.max(0, Math.min(100, Number(event.target.value) || 0));
-                savePages();
-                renderMain();
-            });
-        });
-        buttonList.append(card);
     });
 }
 
@@ -202,44 +181,115 @@ function createPositionField(text, value) {
     return { label, input };
 }
 
-function renderEvents() {
-    const events = ownerEvents();
-    const hasOwner = Boolean(currentPage() && selectedEventOwner);
-    eventHeading.textContent = hasOwner ? `Events: ${selectedEventOwner.type === "page" ? currentPage().name : currentPage().data.buttons.find((button) => button.id === selectedEventOwner.id)?.label}` : "Events";
-    noSelection.hidden = hasOwner;
-    addEventButton.disabled = !hasOwner;
-    eventList.replaceChildren();
-    sorted(events || []).forEach((event) => {
-        const card = document.createElement("article");
-        card.className = "event-card";
+function renderEditor() {
+    const selected = selectedElement();
+    editorForm.replaceChildren();
+    noSelection.hidden = Boolean(selected);
+    if (!selected) {
+        eventHeading.textContent = "Editor";
+        return;
+    }
+    const { type, value } = selected;
+    setEditorHeading(type, type[0].toUpperCase() + type.slice(1));
+    if (type === "page") {
         const name = document.createElement("input");
-        name.value = event.name;
-        name.setAttribute("aria-label", "Event name");
-        const json = document.createElement("textarea");
-        json.value = event.content;
-        json.setAttribute("aria-label", "Event JSON content");
-        card.append(name, json);
-        name.addEventListener("input", () => { event.name = name.value || "Unnamed event"; savePages(); renderPages(); });
-        json.addEventListener("input", () => { event.content = json.value; savePages(); });
-        eventList.append(card);
-    });
+        name.value = value.name;
+        name.setAttribute("aria-label", "Page name");
+        name.addEventListener("input", () => {
+            value.name = name.value || "Untitled page";
+            savePages();
+            renderPages();
+        });
+        editorForm.append(createLabeledField("Name", name));
+        const actions = document.createElement("div");
+        actions.className = "editor-actions";
+        const addButton = document.createElement("button");
+        addButton.type = "button";
+        addButton.append(createIcon("button"), document.createTextNode("Add button"));
+        addButton.disabled = !value.data.image;
+        addButton.addEventListener("click", () => {
+            const button = { id: crypto.randomUUID(), label: `Button ${value.data.buttons.length + 1}`, x: 50, y: 50, events: [] };
+            value.data.buttons.push(button);
+            selectedButtonId = button.id;
+            selectedEventId = undefined;
+            savePages();
+            render();
+        });
+        actions.append(addButton);
+        const addEvent = document.createElement("button");
+        addEvent.type = "button";
+        addEvent.append(createIcon("event"), document.createTextNode("Add page event"));
+        addEvent.setAttribute("aria-label", "Add event to page");
+        addEvent.addEventListener("click", () => addEventTo(value.data.events));
+        actions.append(addEvent);
+        editorForm.append(actions);
+        return;
+    }
+    if (type === "button") {
+        const label = document.createElement("input");
+        label.value = value.label;
+        label.addEventListener("input", () => {
+            value.label = label.value || "Button";
+            savePages();
+            renderPages();
+            renderMain();
+        });
+        editorForm.append(createLabeledField("Label", label));
+        const positions = document.createElement("div");
+        positions.className = "position-fields";
+        const x = createPositionField("X (%)", value.x);
+        const y = createPositionField("Y (%)", value.y);
+        positions.append(x.label, y.label);
+        [["x", x.input], ["y", y.input]].forEach(([axis, input]) => input.addEventListener("input", () => {
+            value[axis] = Math.max(0, Math.min(100, Number(input.value) || 0));
+            savePages();
+            renderMain();
+        }));
+        editorForm.append(positions);
+        const addEvent = document.createElement("button");
+        addEvent.type = "button";
+        addEvent.append(createIcon("event"), document.createTextNode("Add event"));
+        addEvent.addEventListener("click", () => addEventTo(value.events));
+        editorForm.append(addEvent);
+        return;
+    }
+    const name = document.createElement("input");
+    name.value = value.name;
+    const content = document.createElement("textarea");
+    content.value = value.content;
+    name.addEventListener("input", () => { value.name = name.value || "Unnamed event"; savePages(); renderPages(); });
+    content.addEventListener("input", () => { value.content = content.value; savePages(); });
+    editorForm.append(createLabeledField("Name", name), createLabeledField("JSON content", content));
+}
+
+function createLabeledField(text, control) {
+    const label = document.createElement("label");
+    label.append(text, control);
+    return label;
+}
+
+function addEventTo(events) {
+    const event = { id: crypto.randomUUID(), name: `Event ${events.length + 1}`, content: "{}" };
+    events.push(event);
+    selectedEventId = event.id;
+    savePages();
+    render();
 }
 
 function render() {
     renderPages();
     renderMain();
-    renderControls();
-    renderEvents();
+    renderEditor();
 }
 
 function createPage() {
     const page = { name: `Page ${pages.length + 1}`, data: { id: crypto.randomUUID(), image: "", buttons: [], events: [] } };
     pages.push(page);
     selectedPageId = page.data.id;
-    selectedEventOwner = { type: "page" };
+    selectedEventId = undefined;
     savePages();
     render();
-    pageNameInput.focus();
+    editorForm.querySelector("input")?.focus();
 }
 
 function readImage(file) {
@@ -270,7 +320,7 @@ function startButtonDrag(event, element, button) {
         element.removeEventListener("pointermove", move);
         element.removeEventListener("pointerup", stop);
         element.removeEventListener("pointercancel", stop);
-        renderControls();
+        renderEditor();
     };
     element.setPointerCapture(event.pointerId);
     element.addEventListener("pointermove", move);
@@ -279,31 +329,6 @@ function startButtonDrag(event, element, button) {
 }
 
 document.querySelector(".add-page").addEventListener("click", createPage);
-document.querySelector(".add-button").addEventListener("click", () => {
-    const page = currentPage();
-    if (!page) return;
-    const button = { id: crypto.randomUUID(), label: `Button ${page.data.buttons.length + 1}`, x: 50, y: 50, events: [] };
-    page.data.buttons.push(button);
-    selectedButtonId = button.id;
-    selectedEventOwner = { type: "button", id: button.id };
-    savePages();
-    render();
-});
-addEventButton.addEventListener("click", () => {
-    const events = ownerEvents();
-    if (!events) return;
-    events.push({ id: crypto.randomUUID(), name: `Event ${events.length + 1}`, content: "{}" });
-    savePages();
-    render();
-});
-pageNameInput.addEventListener("input", (event) => {
-    const page = currentPage();
-    if (!page) return;
-    page.name = event.target.value || "Untitled page";
-    savePages();
-    renderPages();
-    renderEvents();
-});
 document.querySelector(".image-input").addEventListener("change", (event) => readImage(event.target.files[0]));
 mainPanel.addEventListener("dragover", (event) => {
     event.preventDefault();

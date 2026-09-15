@@ -124,8 +124,43 @@ button:hover,
 
 .tree-icon {
     width: 14px;
+    height: 14px;
+    flex: 0 0 14px;
     color: #64748b;
     text-align: center;
+}
+
+.tree-icon svg {
+    display: block;
+    width: 14px;
+    height: 14px;
+}
+
+.item-icon,
+.editor-heading-icon {
+    display: inline-flex;
+    width: 14px;
+    height: 14px;
+    flex: 0 0 14px;
+    vertical-align: middle;
+}
+
+.item-icon svg,
+.editor-heading-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.editor-heading-icon {
+    margin-right: 6px;
+    color: #64748b;
+}
+
+.editor-actions button,
+.placed-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .tree-item.is-active,
@@ -290,6 +325,12 @@ button:hover,
 .editor-form {
     display: grid;
     gap: 12px;
+}
+
+.editor-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .editor-form label {
