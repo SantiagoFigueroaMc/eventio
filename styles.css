@@ -45,13 +45,13 @@ body {
 .layout {
     display: flex;
     width: 100%;
-    height: calc(100dvh - 48px);
+    height: calc(100dvh - 52px);
     min-width: 0;
 }
 
 .panel {
     min-width: 120px;
-    height: 100%;
+    
     overflow: auto;
 }
 
@@ -124,9 +124,32 @@ button:hover,
 }
 
 .page-list {
+    position: relative;
     display: grid;
     gap: 4px;
     margin-top: 12px;
+}
+
+.tree-drop-line {
+    position: absolute;
+    right: 0;
+    left: 0;
+    height: 2px;
+    background: #2563eb;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.tree-item.is-drag-target {
+    outline: 2px solid #2563eb;
+    outline-offset: -2px;
+    background: #dbeafe;
+}
+
+.tree-item.is-drag-parent,
+.tree-node.is-drag-parent > .tree-row > .tree-item {
+    background: #bfdbfe;
+    color: #1d4ed8;
 }
 
 .tree-children {
@@ -172,6 +195,85 @@ button:hover,
     align-items: center;
     gap: 6px;
     padding: 5px 6px;
+}
+
+.node-delete,
+.tree-row > .node-delete {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: #64748b;
+    flex: 0 0 26px;
+}
+
+.node-delete svg,
+.node-delete-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.node-delete:hover {
+    background: #e2e8f0;
+    color: #dc2626;
+}
+
+.node-child-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.node-child-row.is-active .node-child-item {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.node-child-item {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    border: 0;
+    padding: 7px 8px;
+    background: transparent;
+    text-align: left;
+}
+
+.node-child-icon {
+    display: inline-flex;
+    width: 14px;
+    height: 14px;
+    flex: 0 0 14px;
+}
+
+.node-child-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.node-children {
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.node-children-heading {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #64748b;
 }
 
 .tree-icon {
@@ -375,15 +477,18 @@ button:hover,
 .canvas {
     position: relative;
     display: inline-block;
+    height: 100%;
     max-width: 100%;
     max-height: 100%;
     line-height: 0;
+    overflow: hidden;
 }
 
 .page-image {
     display: block;
+    width: auto;
+    height: 100%;
     max-width: 100%;
-    max-height: calc(100dvh - 48px);
     object-fit: contain;
 }
 
