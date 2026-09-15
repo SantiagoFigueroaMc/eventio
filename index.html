@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐗</text></svg>">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <main class="layout">
+        <section class="panel explorer" aria-label="Explorer">
+            <details class="pages" open>
+                <summary>
+                    <span class="pages-title">
+                        <span class="pages-toggle-icon" aria-hidden="true">›</span>
+                        <b>Pages</b>
+                    </span>
+                    <button class="add-page" type="button">Add</button>
+                </summary>
+                <div class="page-list"></div>
+            </details>
+        </section>
+        <div class="splitter" role="separator" aria-orientation="vertical" aria-label="Resize explorer panel" tabindex="0"></div>
+        <section class="panel main" aria-label="Main content">
+            <div class="empty-state">
+                <div class="upload-icon" aria-hidden="true">↑</div>
+                <h1>Add an image</h1>
+                <p>Drag and drop an image here, or choose a file to start placing buttons.</p>
+                <label class="file-button">
+                    Upload image
+                    <input class="image-input" type="file" accept="image/*">
+                </label>
+            </div>
+            <div class="canvas" hidden>
+                <img class="page-image" alt="">
+                <div class="image-buttons"></div>
+            </div>
+        </section>
+        <div class="splitter" role="separator" aria-orientation="vertical" aria-label="Resize main content panel" tabindex="0"></div>
+        <section class="panel details" aria-label="Selected element editor">
+            <div class="event-content">
+                <h2 class="event-heading">Editor</h2>
+                <p class="no-selection">Select a page, button, or event.</p>
+                <div class="editor-form"></div>
+            </div>
+        </section>
+    </main>
+    <script type="module" src="main.js"></script>
+</body>
+</html>
