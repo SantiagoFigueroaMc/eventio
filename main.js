@@ -11,6 +11,8 @@ const emptyState = document.querySelector(".empty-state");
 const canvas = document.querySelector(".canvas");
 const pageImage = document.querySelector(".page-image");
 const imageButtons = document.querySelector(".image-buttons");
+const toggleImageButtons = document.querySelector(".toggle-image-buttons");
+const toggleImageButtonsIcon = document.querySelector(".toggle-image-buttons-icon");
 const eventHeading = document.querySelector(".event-heading");
 const noSelection = document.querySelector(".no-selection");
 const editorForm = document.querySelector(".editor-form");
@@ -23,6 +25,10 @@ const projects = JSON.parse(localStorage.getItem("eventio-projects") || "[]");
 const legacyPages = JSON.parse(localStorage.getItem("eventio-pages") || "[]");
 const imageDatabase = openImageDatabase();
 let displayedImageUrl;
+let imageButtonsHidden = false;
+let temporaryImageButtonsHidden = false;
+let imageButtonsHideTimer;
+let suppressImageButtonsClick = false;
 let treeDrag;
 let treeClipboard;
 let treeContextMenu;
@@ -648,6 +654,52 @@ async function renderMain() {
     }
 }
 
+function updateImageButtonsVisibility() {
+    const hidden = imageButtonsHidden || temporaryImageButtonsHidden;
+    imageButtons.classList.toggle("is-hidden", hidden);
+    // Only swap the icon markup when it actually changes: replacing the node that
+    // received pointerdown mid-gesture stops the browser from firing "click" afterward.
+    const iconName = imageButtonsHidden ? "eye-slash" : "eye";
+    if (toggleImageButtonsIcon.dataset.icon !== iconName) {
+        toggleImageButtonsIcon.dataset.icon = iconName;
+        toggleImageButtonsIcon.innerHTML = icons[iconName];
+    }
+    toggleImageButtons.setAttribute("aria-pressed", String(imageButtonsHidden));
+    toggleImageButtons.setAttribute("aria-label", imageButtonsHidden ? "Show image buttons" : "Hide image buttons");
+}
+
+function startTemporaryImageButtonsHide(event) {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    toggleImageButtons.setPointerCapture(event.pointerId);
+    temporaryImageButtonsHidden = true;
+    suppressImageButtonsClick = false;
+    updateImageButtonsVisibility();
+    imageButtonsHideTimer = window.setTimeout(() => {
+        suppressImageButtonsClick = true;
+    }, 300);
+}
+
+function stopTemporaryImageButtonsHide(event) {
+    if (imageButtonsHideTimer) {
+        window.clearTimeout(imageButtonsHideTimer);
+        imageButtonsHideTimer = undefined;
+    }
+    temporaryImageButtonsHidden = false;
+    updateImageButtonsVisibility();
+    if (toggleImageButtons.hasPointerCapture(event.pointerId)) {
+        toggleImageButtons.releasePointerCapture(event.pointerId);
+    }
+}
+
+function togglePersistentImageButtons() {
+    if (suppressImageButtonsClick) {
+        suppressImageButtonsClick = false;
+        return;
+    }
+    imageButtonsHidden = !imageButtonsHidden;
+    updateImageButtonsVisibility();
+}
+
 function renderPlacedButtons(page) {
     imageButtons.replaceChildren();
     page.data.buttons.forEach((button) => {
@@ -665,6 +717,7 @@ function renderPlacedButtons(page) {
         element.addEventListener("pointerdown", (event) => startButtonDrag(event, element, button));
         imageButtons.append(element);
     });
+    updateImageButtonsVisibility();
 }
 
 function createPositionField(text, value) {
@@ -1049,6 +1102,15 @@ document.querySelector(".create-project").addEventListener("click", createProjec
 document.querySelectorAll("[data-icon]").forEach((element) => {
     element.innerHTML = icons[element.dataset.icon];
 });
+toggleImageButtonsIcon.dataset.icon = "eye";
+toggleImageButtonsIcon.innerHTML = icons.eye;
+toggleImageButtons.addEventListener("pointerdown", startTemporaryImageButtonsHide);
+toggleImageButtons.addEventListener("pointerup", stopTemporaryImageButtonsHide);
+toggleImageButtons.addEventListener("pointercancel", (event) => {
+    stopTemporaryImageButtonsHide(event);
+    suppressImageButtonsClick = false;
+});
+toggleImageButtons.addEventListener("click", togglePersistentImageButtons);
 document.querySelector(".image-input").addEventListener("change", (event) => readImage(event.target.files[0]));
 document.addEventListener("pointerdown", (event) => {
     if (treeContextMenu && !treeContextMenu.contains(event.target)) {
