@@ -672,8 +672,8 @@ function createPositionField(text, value) {
     label.append(text);
     const input = document.createElement("input");
     input.type = "number";
-    input.min = "0";
-    input.max = "100";
+    input.min = "-100";
+    input.max = "200";
     input.value = value;
     label.append(input);
     return { label, input };
@@ -799,7 +799,7 @@ function renderEditor() {
         const y = createPositionField("Y (%)", value.y);
         positions.append(x.label, y.label);
         [["x", x.input], ["y", y.input]].forEach(([axis, input]) => input.addEventListener("input", () => {
-            value[axis] = Math.max(0, Math.min(100, Number(input.value) || 0));
+            value[axis] = Math.max(-100, Math.min(200, Number(input.value) || 0));
             savePages();
             renderMain();
         }));
@@ -1021,8 +1021,8 @@ function startButtonDrag(event, element, button) {
     event.stopPropagation();
     const rect = imageButtons.getBoundingClientRect();
     const move = (moveEvent) => {
-        button.x = Math.max(0, Math.min(100, ((moveEvent.clientX - rect.left) / rect.width) * 100));
-        button.y = Math.max(0, Math.min(100, ((moveEvent.clientY - rect.top) / rect.height) * 100));
+        button.x = Math.max(-100, Math.min(200, ((moveEvent.clientX - rect.left) / rect.width) * 100));
+        button.y = Math.max(-100, Math.min(200, ((moveEvent.clientY - rect.top) / rect.height) * 100));
         element.style.left = `${button.x}%`;
         element.style.top = `${button.y}%`;
         savePages();

@@ -126,8 +126,13 @@ button:hover,
 .page-list {
     position: relative;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 4px;
     margin-top: 12px;
+}
+
+.tree-node {
+    min-width: 0;
 }
 
 .tree-drop-line {
@@ -154,6 +159,7 @@ button:hover,
 
 .tree-children {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 2px;
     margin-left: 14px;
 }
@@ -161,6 +167,7 @@ button:hover,
 .tree-row {
     display: flex;
     align-items: center;
+    min-width: 0;
 }
 
 .tree-toggle {
@@ -188,6 +195,7 @@ button:hover,
 .tree-item {
     flex: 1;
     width: 100%;
+    min-width: 0;
     border: 0;
     text-align: left;
     background: transparent;
@@ -209,10 +217,12 @@ button:hover,
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    min-width: 0;
 }
 
 .tree-count {
     margin-left: auto;
+    flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -269,6 +279,14 @@ button:hover,
     background: transparent;
     color: #64748b;
     flex: 0 0 26px;
+    opacity: 0;
+}
+
+.tree-row:hover > .node-delete,
+.tree-row:focus-within > .node-delete,
+.node-child-row:hover .node-delete,
+.node-child-row:focus-within .node-delete {
+    opacity: 1;
 }
 
 .node-delete svg,
@@ -488,10 +506,12 @@ button:hover,
 }
 
 .main {
-    display: grid;
+    display: flex;
     min-width: 0;
-    place-items: center;
+    align-items: center;
+    justify-content: center;
     padding: 24px;
+    overflow: hidden;
 }
 
 .empty-state {
@@ -541,7 +561,7 @@ button:hover,
     max-width: 100%;
     max-height: 100%;
     line-height: 0;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .page-image {
@@ -555,6 +575,7 @@ button:hover,
 .image-buttons {
     position: absolute;
     inset: 0;
+    overflow: visible;
 }
 
 .placed-button {
