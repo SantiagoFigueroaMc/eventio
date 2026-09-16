@@ -197,6 +197,66 @@ button:hover,
     padding: 5px 6px;
 }
 
+.tree-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+}
+
+.tree-label-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tree-count {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.1em;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.tree-context-menu {
+    position: fixed;
+    z-index: 10;
+    display: grid;
+    min-width: 150px;
+    padding: 4px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #ffffff;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);
+}
+
+.tree-context-action {
+    border: 0;
+    border-radius: 4px;
+    padding: 7px 10px;
+    background: transparent;
+    text-align: left;
+}
+
+.tree-context-action:hover:not(:disabled) {
+    border-color: transparent;
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.tree-context-action:disabled {
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
 .node-delete,
 .tree-row > .node-delete {
     display: inline-flex;

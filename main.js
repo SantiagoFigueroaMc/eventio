@@ -5,6 +5,7 @@ const panels = [...document.querySelectorAll(".panel")];
 const splitters = [...document.querySelectorAll(".splitter")];
 const minimumPanelWidth = 120;
 const pageList = document.querySelector(".page-list");
+const explorerPanel = document.querySelector(".explorer");
 const mainPanel = document.querySelector(".main");
 const emptyState = document.querySelector(".empty-state");
 const canvas = document.querySelector(".canvas");
@@ -23,6 +24,9 @@ const legacyPages = JSON.parse(localStorage.getItem("eventio-pages") || "[]");
 const imageDatabase = openImageDatabase();
 let displayedImageUrl;
 let treeDrag;
+let treeClipboard;
+let treeContextMenu;
+let treeRootContextMenuAttached = false;
 if (!projects.length) {
     projects.push({ id: crypto.randomUUID(), name: "Untitled project", pages: legacyPages });
     localStorage.setItem("eventio-projects", JSON.stringify(projects));
@@ -132,7 +136,21 @@ function selectedElement() {
     return { type: "page", value: page };
 }
 
-function makeTreeItem(iconName, name, className, onClick, dragNode) {
+function getTreeNodeCount(node) {
+    if (node.type === "page") return node.page.data.buttons.length + node.page.data.events.length;
+    if (node.type === "button") return node.button.events.length;
+    return 0;
+}
+
+function makeTreeItem(iconName, name, className, onClick, dragNode, childCount = 0) {
+    if (!treeRootContextMenuAttached) {
+        explorerPanel.addEventListener("contextmenu", (event) => {
+            if (event.target.closest(".tree-item, .tree-toggle, .node-delete, .add-page, summary")) return;
+            event.preventDefault();
+            openTreeContextMenu(event, { type: "pages" });
+        });
+        treeRootContextMenuAttached = true;
+    }
     const item = document.createElement("button");
     item.className = className;
     item.type = "button";
@@ -141,12 +159,160 @@ function makeTreeItem(iconName, name, className, onClick, dragNode) {
     icon.setAttribute("aria-hidden", "true");
     icon.innerHTML = icons[iconName];
     const label = document.createElement("span");
-    label.textContent = name;
+    label.className = "tree-label";
+    const text = document.createElement("span");
+    text.className = "tree-label-text";
+    text.textContent = name;
+    const count = document.createElement("span");
+    count.className = "tree-count";
+    count.textContent = `(${childCount})`;
+    label.append(text, count);
     item.append(icon, label);
     item.addEventListener("click", onClick);
+    item.addEventListener("contextmenu", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openTreeContextMenu(event, dragNode);
+    });
     if (dragNode) {
         item.treeNode = dragNode;
         item.addEventListener("pointerdown", (event) => startTreeDrag(event, dragNode, item));
+    }
+
+    function cloneTreeValue(value) {
+        const clone = structuredClone(value);
+        const refreshIds = (node) => {
+            node.id = crypto.randomUUID();
+            node.events?.forEach(refreshIds);
+            node.buttons?.forEach((button) => {
+                button.id = crypto.randomUUID();
+                button.events?.forEach(refreshIds);
+            });
+        };
+        if (clone.data) {
+            clone.data.id = crypto.randomUUID();
+            clone.data.buttons?.forEach((button) => {
+                button.id = crypto.randomUUID();
+                button.events?.forEach(refreshIds);
+            });
+            clone.data.events?.forEach(refreshIds);
+        } else {
+            refreshIds(clone);
+        }
+        return clone;
+    }
+
+    function nodeValue(node) {
+        return node.type === "page" ? node.page : node.type === "button" ? node.button : node.event;
+    }
+
+    function treeNodeName(node) {
+        return node.type === "page" ? node.page.name : node.type === "button" ? node.button.label : node.event.name;
+    }
+
+    function removeTreeNode(node) {
+        if (node.type === "page") {
+            const index = pages.indexOf(node.page);
+            if (index !== -1) pages.splice(index, 1);
+            return;
+        }
+        const list = node.type === "button"
+            ? node.page.data.buttons
+            : node.button?.events || node.page.data.events;
+        const value = nodeValue(node);
+        const index = list.indexOf(value);
+        if (index !== -1) list.splice(index, 1);
+    }
+
+    function pasteDestination(target, value) {
+        if (value.data && target.type === "pages") {
+            return { list: pages, index: pages.length };
+        }
+        if (value.data && target.type === "page") {
+            return { list: pages, index: pages.indexOf(target.page) + 1 };
+        }
+        if (value.label && target.type === "page") {
+            return { list: target.page.data.buttons, index: target.page.data.buttons.length, page: target.page };
+        }
+        if (value.name && target.type === "page") {
+            return { list: target.page.data.events, index: target.page.data.events.length, page: target.page };
+        }
+        if (value.name && target.type === "button") {
+            return { list: target.button.events, index: target.button.events.length, page: target.page, button: target.button };
+        }
+        return null;
+    }
+
+    function pasteTreeNode(target) {
+        if (!treeClipboard) return;
+        const value = treeClipboard.mode === "copy"
+            ? cloneTreeValue(treeClipboard.value)
+            : treeClipboard.value;
+        const destination = pasteDestination(target, value);
+        if (!destination) return;
+        if (treeClipboard.mode === "cut") removeTreeNode(treeClipboard.node);
+        destination.list.splice(destination.index, 0, value);
+        if (value.data) {
+            selectedPageId = value.data.id;
+            selectedButtonId = undefined;
+            selectedEventId = undefined;
+        } else if (value.label) {
+            value.events ||= [];
+            selectedPageId = destination.page.data.id;
+            selectedButtonId = value.id;
+            selectedEventId = undefined;
+        } else {
+            selectedPageId = destination.page.data.id;
+            selectedButtonId = destination.button?.id;
+            selectedEventId = value.id;
+        }
+        treeClipboard = undefined;
+        savePages();
+        render();
+    }
+
+    function createTreeMenuAction(label, onClick, disabled = false) {
+        const action = document.createElement("button");
+        action.type = "button";
+        action.className = "tree-context-action";
+        action.textContent = label;
+        action.disabled = disabled;
+        action.addEventListener("click", () => {
+            onClick();
+            closeTreeContextMenu();
+        });
+        return action;
+    }
+
+    function closeTreeContextMenu() {
+        treeContextMenu?.remove();
+        treeContextMenu = undefined;
+    }
+
+    function openTreeContextMenu(event, node) {
+        closeTreeContextMenu();
+        const menu = document.createElement("div");
+        menu.className = "tree-context-menu";
+        menu.setAttribute("role", "menu");
+        const clipboardValue = treeClipboard?.value;
+        const pasteAllowed = Boolean(clipboardValue && pasteDestination(node, clipboardValue));
+        const isRoot = node.type === "pages";
+        menu.append(
+            createTreeMenuAction("Copy", () => {
+                treeClipboard = { mode: "copy", value: nodeValue(node), node };
+            }, isRoot),
+            createTreeMenuAction("Cut", () => {
+                treeClipboard = { mode: "cut", value: nodeValue(node), node };
+            }, isRoot),
+            createTreeMenuAction("Paste", () => pasteTreeNode(node), !pasteAllowed),
+            createTreeMenuAction("Delete", () => deleteNode(node), isRoot),
+        );
+        document.body.append(menu);
+        const menuWidth = 150;
+        const menuHeight = 164;
+        menu.style.left = `${Math.min(event.clientX, window.innerWidth - menuWidth - 8)}px`;
+        menu.style.top = `${Math.min(event.clientY, window.innerHeight - menuHeight - 8)}px`;
+        treeContextMenu = menu;
     }
     return item;
 }
@@ -173,7 +339,7 @@ function renderPages() {
             selectedButtonId = undefined;
             selectedEventId = undefined;
             render();
-        }, { type: "page", page });
+        }, { type: "page", page }, getTreeNodeCount({ type: "page", page }));
         const pageRow = createTreeRow(pageButton, expandedPages.has(page.data.id), () => {
             toggleSet(expandedPages, page.data.id);
             renderPages();
@@ -206,7 +372,7 @@ function renderPages() {
                 selectedButtonId = item.id;
                 selectedEventId = undefined;
                 render();
-            }, { type: "button", button: item, page });
+            }, { type: "button", button: item, page }, getTreeNodeCount({ type: "button", button: item }));
             const buttonRow = createTreeRow(buttonItem, expandedButtons.has(item.id), () => {
                 toggleSet(expandedButtons, item.id);
                 renderPages();
@@ -884,6 +1050,18 @@ document.querySelectorAll("[data-icon]").forEach((element) => {
     element.innerHTML = icons[element.dataset.icon];
 });
 document.querySelector(".image-input").addEventListener("change", (event) => readImage(event.target.files[0]));
+document.addEventListener("pointerdown", (event) => {
+    if (treeContextMenu && !treeContextMenu.contains(event.target)) {
+        treeContextMenu.remove();
+        treeContextMenu = undefined;
+    }
+});
+document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && treeContextMenu) {
+        treeContextMenu.remove();
+        treeContextMenu = undefined;
+    }
+});
 mainPanel.addEventListener("dragover", (event) => {
     event.preventDefault();
     if (!currentPage()?.data.imageId) mainPanel.classList.add("is-dragging");
