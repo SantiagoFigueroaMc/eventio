@@ -816,9 +816,6 @@ function renderEditor() {
         addButton.addEventListener("click", () => {
             const button = { id: crypto.randomUUID(), label: `Button ${value.data.buttons.length + 1}`, x: 50, y: 50, events: [] };
             value.data.buttons.push(button);
-            selectedPageId = value.data.id;
-            selectedButtonId = button.id;
-            selectedEventId = undefined;
             savePages();
             render();
         });
@@ -829,8 +826,6 @@ function renderEditor() {
         addEvent.setAttribute("aria-label", "Add event to page");
         addEvent.addEventListener("click", () => {
             addEventTo(value.data.events);
-            selectedPageId = value.data.id;
-            selectedButtonId = undefined;
         });
         actions.append(addEvent);
         editorForm.append(actions);
@@ -884,8 +879,6 @@ function renderEditor() {
         addEvent.append(createIcon("event"), document.createTextNode("Add event"));
         addEvent.addEventListener("click", () => {
             addEventTo(value.events);
-            selectedPageId = currentPage().data.id;
-            selectedButtonId = value.id;
         });
         editorForm.append(addEvent);
         return;
@@ -908,7 +901,6 @@ function createLabeledField(text, control) {
 function addEventTo(events) {
     const event = { id: crypto.randomUUID(), name: `Event ${events.length + 1}`, content: "{}" };
     events.push(event);
-    selectedEventId = event.id;
     savePages();
     render();
 }
