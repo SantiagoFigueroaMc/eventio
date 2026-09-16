@@ -12,4 +12,4 @@ Mark with an "X" the tasks that are done.
 - [X] Allow to edit child nodes in the third column
 - [X] Create a zip with the proyect when sharing. it should include the images. make sure to export in a way that latter the links between page and image can be re-built. 
 - [X] Add an import project button in the projects modal. It should allow an import of only text or the zip file with the images. make sure when importing the images that they are linked to the corresponding page.
-- [ ] Split main js file into smaller files human readable.
+- [X] Split main js file into smaller files human readable.
