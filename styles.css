@@ -268,7 +268,8 @@ button:hover,
 }
 
 .node-delete,
-.tree-row > .node-delete {
+.tree-row > .node-delete,
+.node-edit {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -285,12 +286,16 @@ button:hover,
 .tree-row:hover > .node-delete,
 .tree-row:focus-within > .node-delete,
 .node-child-row:hover .node-delete,
-.node-child-row:focus-within .node-delete {
+.node-child-row:focus-within .node-delete,
+.node-child-row:hover .node-edit,
+.node-child-row:focus-within .node-edit {
     opacity: 1;
 }
 
 .node-delete svg,
-.node-delete-icon {
+.node-delete-icon,
+.node-edit svg,
+.node-edit-icon {
     width: 14px;
     height: 14px;
 }
@@ -298,6 +303,11 @@ button:hover,
 .node-delete:hover {
     background: #e2e8f0;
     color: #dc2626;
+}
+
+.node-edit:hover {
+    background: #e2e8f0;
+    color: #2563eb;
 }
 
 .node-child-row {
@@ -322,6 +332,16 @@ button:hover,
     padding: 7px 8px;
     background: transparent;
     text-align: left;
+}
+
+.node-child-rename-input {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    border: 1px solid #3b82f6;
+    border-radius: 5px;
+    padding: 6px 8px;
+    font: inherit;
 }
 
 .node-child-icon {
